@@ -122,3 +122,24 @@ class dtc(sor):
         Sigma = Kms@self.S@(Kms.T) + Kmm - Qmm
 
         return mu, Sigma
+
+
+class fitc(dtc):
+    """
+    class of FITC gaussian process
+    """
+    def __init__(self, kernel, Xn, yn, sigma, Us):
+        super().__init__(kernel, Xn, yn, sigma, Us)
+        self.Lambda_inv = 1./np.array([\
+            self.kernel(Xn[i], Xn[i]) - self.Ksn[:,i]@self.Kss_inv@self.Ksn[:,i] + (self.sigma**2)\
+                for i in range(len(yn))])
+    
+    def __call__(self, Xm):
+        Kmm = getKernelMatrix(self.kernel, Xm)
+        Kms = getKernelMatrix(self.kernel, Xm, self.Us)
+        Qmm = Kms@self.Kss_inv@(Kms.T)
+
+        mu = Kms@self.S@self.Ksn@(self.yn*self.Lambda_inv) + self.y_mean
+        Sigma = Kms@self.S@(Kms.T) + Kmm - Qmm
+
+        return mu, Sigma
