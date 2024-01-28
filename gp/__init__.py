@@ -103,3 +103,22 @@ class sor(element):
         Sigma = Kms@self.S@(Kms.T)
 
         return mu, Sigma
+
+
+class dtc(sor):
+    """
+    class of DTC gaussian process
+    """
+    def __init__(self, kernel, Xn, yn, sigma, Us):
+        super().__init__(kernel, Xn, yn, sigma, Us)
+        self.Kss_inv = np.linalg.inv(self.Kss)
+
+    def __call__(self, Xm):
+        Kmm = getKernelMatrix(self.kernel, Xm)
+        Kms = getKernelMatrix(self.kernel, Xm, self.Us)
+        Qmm = Kms@self.Kss_inv@(Kms.T)
+
+        mu = Kms@self.S@self.Ksn@self.yn/(self.sigma**2) + self.y_mean
+        Sigma = Kms@self.S@(Kms.T) + Kmm - Qmm
+
+        return mu, Sigma
