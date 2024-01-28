@@ -84,3 +84,22 @@ class GP(element):
 		yn = np.concatenate((self.yn + self.y_mean, ym))
 		self.y_mean = np.mean(yn)
 		self.yn = yn - self.y_mean
+
+
+class sor(element):
+    """
+    class of SOR gaussian process
+    """
+    def __init__(self, kernel, Xn, yn, sigma, Us):
+        super().__init__(kernel, Xn, yn, sigma)
+		self.Us = Us #<np:float:(S, D)> latent inputs
+		self.Ksn = getKernelMatrix(kernel, Us, Xn)
+		self.Kss = getKernelMatrix(kernel, Us)
+		self.S = np.linalg.inv(self.Ksn@(self.Ksn.T)/(self.sigma**2) + self.Kss)
+    
+    def __call__(self, Xm):
+        Kms = getKernelMatrix(self.kernel, Xm, self.Us)
+        mu = Kms@self.S@self.Ksn@self.yn/(self.sigma**2) + self.y_mean
+        Sigma = Kms@self.S@(Kms.T)
+
+        return mu, Sigma
