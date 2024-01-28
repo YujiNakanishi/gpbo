@@ -48,3 +48,39 @@ class element:
     
     def inverse_wsigma(self, K):
         return np.linalg.inv(K + (self.sigma**2)*np.eye(len(K)))
+
+
+class GP(element):
+    """
+    class of pure gaussian process
+    """
+    def __init__(self, kernel, Xn, yn, sigma):
+        super().__init__(kernel, Xn, yn, sigma)
+        self.Knn = getKernelMatrix(self.kernel, self.Xn) #<np:float:(N, N)> kernel matrix
+        self.Knn_inv_wsigma = self.inverse_wsigma(self.Knn) #(Knn + sigma^2I)
+    
+
+    def __call__(self, Xm):
+        Knm = getKernelMatrix(self.kernel, self.Xn, Xm)
+        Kmm = getKernelMatrix(self.kernel, Xm)
+
+        mu = (Knm.T)@(self.Knn_inv_wsigma@self.yn) + self.y_mean
+        Sigma = Kmm - (Knm.T)@(self.Knn_inv_wsigma@Knm)
+
+        return mu, Sigma
+    
+
+    def addData(self, Xm, ym):
+		Knm = getKernelMatrix(self.kernel, self.Xn, Xm)
+		Kmm = getKernelMatrix(self.kernel, Xm)
+
+		K1 = np.concatenate((self.Knn, Knm), axis = 1)
+		K2 = np.concatenate((Knm.T, Kmm), axis = 1)
+
+		self.Knn = np.concatenate((K1, K2), axis = 0)
+		self.Knn_inv_wsigma = self.inverse_wsigma(self.Knn)
+		
+		self.Xn = np.concatenate((self.Xn, Xm), axis = 0)
+		yn = np.concatenate((self.yn + self.y_mean, ym))
+		self.y_mean = np.mean(yn)
+		self.yn = yn - self.y_mean
