@@ -32,3 +32,19 @@ def getKernelMatrix(kernel, Xn, Xm = None):
                 K[i, j] = kernel(Xn[i], Xm[j])
 
     return K
+
+
+class element:
+    """
+    Element class for gaussian process.
+    Define some methods which are useful for any gaussian process.
+    """
+    def __init__(self, kernel, Xn, yn, sigma):
+        self.kernel = kernel #<kernel class>
+        self.Xn = Xn #<np:float:(N, D)> input data
+        self.sigma = sigma #<float> standard dev of observation
+        self.y_mean = np.mean(yn) #<float>
+        self.yn = yn - self.y_mean #<np:float:(N, )> output data
+    
+    def inverse_wsigma(self, K):
+        return np.linalg.inv(K + (self.sigma**2)*np.eye(len(K)))
