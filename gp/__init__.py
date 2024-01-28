@@ -84,6 +84,28 @@ class GP(element):
 		yn = np.concatenate((self.yn + self.y_mean, ym))
 		self.y_mean = np.mean(yn)
 		self.yn = yn - self.y_mean
+    
+
+    def pred_grad(self, x):
+        mu, sigma = self(x.reshape(1,-1))
+        sigma = np.sqrt(sigma)[0,0]
+
+        K_1n = []; gradK_1n = []; K_n1 = []; gradK_n1 = []
+        for X in self.Xn:
+            val_1n, grad_1n = self.kernel.val_grad(x, X, 0)
+            K_1n.append(val_1n); gradK_1n.append(grad_1n)
+            val_n1, grad_n1 = self.kernel.val_grad(X, x, 1)
+            K_n1.append(val_n1); gradK_n1.append(grad_n1)
+
+        K_1n = np.array(K_1n); gradK_1n = np.stack(gradK_1n, axis = 1)
+        K_n1 = np.array(K_n1); gradK_n1 = np.stack(gradK_n1, axis = 0)
+
+        grad_mu = gradK_1n@self.Knn_inv_wsigma@self.yn
+        grad_sigma = ( \
+            self.kernel.grad(x, x, 0) - gradK_1n@self.Knn_inv_wsigma@K_n1 - K_1n@self.Knn_inv_wsigma@gradK_n1 \
+            )/2./sigma
+
+        return mu, sigma, grad_mu, grad_sigma
 
 
 class sor(element):
